@@ -46,6 +46,13 @@ static volatile uint32_t s_camera_stream_params = 0;
 /* Viewer refreshes its request once per second. */
 #define CAMERA_STREAM_TIMEOUT_MS 2500u
 
+static uint16_t telemetry_age_ms(uint32_t now_ms, uint32_t last_ms)
+{
+    if (last_ms == 0) return UINT16_MAX;
+    uint32_t age = now_ms - last_ms;
+    return age > UINT16_MAX ? UINT16_MAX : (uint16_t)age;
+}
+
 /* Peer drone positions (map frame), protected by s_peer_mutex */
 static wifi_peer_list_t   s_peers = { .count = 0 };
 static SemaphoreHandle_t  s_peer_mutex;
@@ -302,7 +309,7 @@ static void handle_traj_data(const uint8_t *buf, int len)
     nav_traj_put(buf[2], total, offset, buf + 8, n);
 }
 
-/* CMD_TRAJ_START: pkt, cmd, id, dt_ms(u16) */
+/* CMD_TRAJ_START: pkt, cmd, id, dt_ms(u16), optional flags(u8; bit0=yaw-follow) */
 static void handle_traj_start(const uint8_t *buf, int len)
 {
     if (len < 5) return;
@@ -312,7 +319,8 @@ static void handle_traj_start(const uint8_t *buf, int len)
     }
     uint16_t dt_ms;
     memcpy(&dt_ms, buf + 3, sizeof(dt_ms));
-    nav_traj_start(buf[2], dt_ms);
+    uint8_t flags = (len >= 6) ? buf[5] : 0;     /* optional: bit0 = yaw follows path */
+    nav_traj_start(buf[2], dt_ms, flags);
 }
 
 wifi_peer_list_t wifi_get_peers(void)
@@ -443,6 +451,31 @@ void wifi_task(void *arg)
             pkt.vfh_blocked[b] = ns.vfh_blocked[b] ? 1 : 0;
 
         pkt.reloc_age_s = 0xFFFF;   /* never relocalised */
+
+        /* Appended PX4 health and kinematics for baseline logging. */
+        uint32_t now_ms = (uint32_t)(esp_timer_get_time() / 1000);
+        pkt.px4_hb_age_ms  = telemetry_age_ms(now_ms, drone.last_hb_ms);
+        pkt.px4_pos_age_ms = telemetry_age_ms(now_ms, drone.last_pos_ms);
+        pkt.px4_att_age_ms = telemetry_age_ms(now_ms, drone.last_att_ms);
+        pkt.px4_link_ok = (pkt.px4_hb_age_ms < 2000
+                           && pkt.px4_pos_age_ms < 500
+                           && pkt.px4_att_age_ms < 500) ? 1 : 0;
+        pkt.px4_armed = drone.armed ? 1 : 0;
+        pkt.px4_custom_main_mode = drone.custom_main_mode;
+        pkt.ned_z  = drone.z;
+        pkt.ned_vx = drone.vx;
+        pkt.ned_vy = drone.vy;
+        pkt.ned_vz = drone.vz;
+        pkt.q_w = drone.q[0];  pkt.q_x = drone.q[1];
+        pkt.q_y = drone.q[2];  pkt.q_z = drone.q[3];
+        pkt.roll_rate  = drone.rollspeed;
+        pkt.pitch_rate = drone.pitchspeed;
+        pkt.yaw_rate   = drone.yawspeed;
+        pkt.roll_rad   = drone.roll;
+        pkt.pitch_rad  = drone.pitch;
+        pkt.px4_pos_boot_ms = drone.pos_boot_ms;
+        pkt.px4_att_boot_ms = drone.att_boot_ms;
+        pkt.q_from_px4 = drone.q_from_px4;
 
         /* ---- Send telemetry ---- */
         send(tx_sock, &pkt, sizeof(pkt), 0);

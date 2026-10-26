@@ -167,7 +167,7 @@ View a drone's camera over WiFi (drone IP = `192.168.1.(200 + drone ID)`):
 python3 laptop/camera_stream.py --esp-ip 192.168.1.222 [--fps 10] [--quality 60]
 ```
 
-`s` saves a frame.
+`s` saves a frame to `calibration_images/` in the project root.
 
 With AprilTags drawn on the frame:
 ```bash
@@ -185,6 +185,116 @@ send keepalives, the most recent keepalive wins. The Wi-Fi access point must
 allow client-to-client traffic, and the viewer firewall must allow Python to
 receive UDP 5008 and 5009. MAVLink remains on `CONFIG_HOST_IPV4_ADDR` while a
 different laptop is viewing the camera.
+
+### Live preview with a photo every four seconds
+
+Connect the laptop to the drone's Wi-Fi, then run:
+
+```bash
+python3 laptop/camera_capture.py --esp-ip 192.168.1.222 --quality 90
+```
+
+Replace the IP with your ESP32's address (`192.168.1.(200 + drone ID)`).
+This opens a live camera window and saves a photo every **4 seconds** to
+`calibration_images/` in the project root, creating the folder automatically.
+The first automatic photo is saved four seconds after the first valid frame.
+The window shows the photo count and countdown. Press `s` for an extra photo,
+or `q`/Esc to stop; closing the window also stops the stream.
+
+Photos are PNGs at the original camera resolution, without preview text or
+resizing, and have unique timestamped filenames. During a connection pause,
+automatic capture waits for a fresh frame instead of repeatedly saving the
+frozen preview. The viewer saves frames from the existing ESP32 stream; no
+firmware change is required. Run this viewer on its own rather than alongside
+another camera viewer, since the firmware uses one stream destination.
+
+To change the interval or destination:
+
+```bash
+python3 laptop/camera_capture.py --esp-ip 192.168.1.222 \
+  --save-interval 4 --save-dir calibration_images --quality 90
+```
+
+An explicit relative `--save-dir` is relative to the terminal's current
+directory; the default always points to this project's `calibration_images/`.
+`--save-interval 0` disables automatic photos. The same options are also
+available in `camera_stream.py`, where automatic capture is disabled by default.
+
+### Calibrate camera intrinsics from ChArUco images
+
+`laptop/calibrate_camera.py` takes saved photographs of an **8 by 11 square**
+ChArUco board with **15 mm squares** and **11 mm ArUco markers**. These are
+square counts, not internal corner counts: this board has 7 by 10 internal
+corners and measures 120 by 165 mm, excluding margins.
+
+Use the laptop dependencies above (OpenCV 4.8+). Put 15–30 sharp images in a
+folder, then run from the repository root:
+
+```bash
+python3 laptop/calibrate_camera.py \
+  --images calibration_images \
+  --output camera_intrinsics.json \
+  --debug-dir calibration_detections
+```
+
+`--images` also accepts individual files or a quoted glob such as
+`"calibration_images/*.jpg"`. Folders are read without descending into
+subfolders. Keep detection outputs in a separate folder from input photographs.
+For the ESP32 camera, `s` in `camera_stream.py` saves a raw frame.
+
+The default dictionary is `DICT_6X6_1000`. OpenCV's standard `DICT_6X6_50`,
+`DICT_6X6_100`, `DICT_6X6_250`, and `DICT_6X6_1000` share the first 44 marker
+patterns used on this board, so the default covers those variants. The script
+assumes the standard OpenCV arrangement with marker IDs 0–43. If known, select
+the exact dictionary with `--dictionary DICT_6X6_250`. Custom marker layouts
+need a matching board definition. Use `--squares-x 11 --squares-y 8` if that is
+how the board was generated; rotating the camera image alone does not require
+swapping these values. `--legacy-pattern` supports older OpenCV board patterns.
+
+Keep the board flat and vary its tilt, distance, and position across the frame,
+including near the edges. Use the same camera resolution, focus, zoom, and crop
+as your intended application. Mixed resolutions cause an error; images without
+enough detected corners are skipped. At least 10 usable views are required by
+default. Partial board views are supported when enough corners are visible.
+
+The JSON contains `camera_matrix`, `dist_coeffs` in `[k1, k2, p1, p2, k3]`
+order, `fx`, `fy`, `cx`, `cy` in pixels, image dimensions, and overall and
+per-image RMS reprojection errors in pixels. Inspect the annotated images and
+the highest-error views printed by the script. Low reprojection error alone
+does not establish accuracy; varied views are essential. This uses OpenCV's
+standard pinhole camera model with five distortion coefficients.
+
+If the marker codes are too small to decode but the entire checkerboard is
+visible, use `--detector chessboard`. It detects the complete grid, refines
+corners on the original pixels, and saves intrinsics at the original resolution.
+This mode requires all internal corners in each accepted image. For the board
+captured on 22 October 2026 (11 squares across, 8 down), use:
+
+```bash
+python3 laptop/calibrate_camera.py --images calibration_images \
+  --squares-x 11 --squares-y 8 --detector chessboard \
+  --output camera_intrinsics.json --debug-dir calibration_detections_chessboard
+```
+
+Load the result for undistortion:
+
+```python
+import json
+import cv2
+import numpy as np
+
+with open("camera_intrinsics.json") as f:
+    calibration = json.load(f)
+K = np.array(calibration["camera_matrix"], dtype=np.float64)
+dist = np.array(calibration["dist_coeffs"], dtype=np.float64)
+image = cv2.imread("calibration_images/photo.jpg")
+undistorted = cv2.undistort(image, K, dist)
+cv2.imwrite("undistorted.jpg", undistorted)
+```
+
+Calibration results are saved for inspection; applying them to the firmware
+or AprilTag host settings is a separate step. The detector and calibration
+approach follows the [OpenCV ChArUco calibration tutorial](https://docs.opencv.org/4.12.0/da/d13/tutorial_aruco_calibration.html).
 
 ## 4. Simple arming and takeoff (Lab 5)
 
@@ -230,3 +340,15 @@ python3 laptop/send_trajectory.py --takeoff --takeoff-wait 12 --trajectory traje
 
 See `trajectory/README.md` for the included circle and compact minimum-snap
 ellipse, how to regenerate their CSV files, and the space each path needs.
+
+## Ground AprilTag mapping and raw CSV recording
+
+`laptop/tag_mapper.py` records original camera JPEGs, MAVLink packets, and
+full-precision CSV readings. It initializes floor-tag positions and jointly
+refines tags and the recorded drone trajectory using explicit Gauss–Newton.
+Known tag centres are supplied by family/ID in YAML. Mapping results are
+offline artifacts; the mapper does not send corrections to PX4.
+
+See [laptop/TAG_MAPPING.md](laptop/TAG_MAPPING.md) for recording/replay commands,
+CSV columns, survey YAML, and the exposure-timing requirements of the current
+camera stream.

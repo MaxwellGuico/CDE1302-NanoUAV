@@ -1,0 +1,4 @@
+family_or_dictionary,tag_id,status,survey_position_m,initial_error_m,optimized_error_m
+tag16h5,0,evaluated,"[1.2, 0.65, 0.0]",0.2531041503931559,0.2531041503931559
+tag16h5,2,evaluated,"[2.78, -0.7, 0.0]",0.3141121671418109,0.3141121671418109
+tag16h5,3,unobserved,"[2.7, 0.52, 0.0]",,

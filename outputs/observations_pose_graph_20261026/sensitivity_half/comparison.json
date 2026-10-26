@@ -1,0 +1,162 @@
+{
+  "rows": [
+    {
+      "tag_id": 0,
+      "anchor": false,
+      "accepted_frames": 7,
+      "ground_truth_x_m": 1.2,
+      "ground_truth_y_m": 0.65,
+      "status": "converged_cost",
+      "before_x_m": 0.9826986162360112,
+      "before_y_m": 0.7797760361565146,
+      "before_error_x_m": -0.21730138376398878,
+      "before_error_y_m": 0.12977603615651456,
+      "before_error_m": 0.2531041503931559,
+      "after_x_m": 1.2771590667424277,
+      "after_y_m": 0.7210835721401213,
+      "after_error_x_m": 0.07715906674242778,
+      "after_error_y_m": 0.07108357214012129,
+      "after_error_m": 0.10491137120809284,
+      "recorded_mean_x_m": 1.0465428571428572,
+      "recorded_mean_y_m": 0.9603857142857144,
+      "recorded_mean_error_m": 0.3462490235748408,
+      "archived_summary_x_m": 1.048,
+      "archived_summary_y_m": 0.96
+    },
+    {
+      "tag_id": 1,
+      "anchor": true,
+      "accepted_frames": 151,
+      "ground_truth_x_m": 1.2,
+      "ground_truth_y_m": -0.7,
+      "status": "converged_cost",
+      "before_x_m": 0.9450910498681792,
+      "before_y_m": -0.6108024278339037,
+      "before_error_x_m": -0.2549089501318208,
+      "before_error_y_m": 0.08919757216609625,
+      "before_error_m": 0.27006439924142733,
+      "after_x_m": 1.1998628400667615,
+      "after_y_m": -0.6999383920229877,
+      "after_error_x_m": -0.0001371599332384843,
+      "after_error_y_m": 6.160797701226794e-05,
+      "after_error_m": 0.00015036086631011942,
+      "recorded_mean_x_m": 0.8882490066225165,
+      "recorded_mean_y_m": -0.5750920529801323,
+      "recorded_mean_error_m": 0.33584323292358564,
+      "archived_summary_x_m": 0.881,
+      "archived_summary_y_m": -0.572
+    },
+    {
+      "tag_id": 2,
+      "anchor": false,
+      "accepted_frames": 2,
+      "ground_truth_x_m": 2.78,
+      "ground_truth_y_m": -0.7,
+      "status": "tentative_two_frames",
+      "before_x_m": 2.475707962137518,
+      "before_y_m": -0.7779282313415546,
+      "before_error_x_m": -0.3042920378624818,
+      "before_error_y_m": -0.07792823134155469,
+      "before_error_m": 0.3141121671418109,
+      "after_x_m": 2.7678365598581145,
+      "after_y_m": -0.8307776917768545,
+      "after_error_x_m": -0.012163440141885307,
+      "after_error_y_m": -0.1307776917768545,
+      "after_error_m": 0.13134212554457605,
+      "recorded_mean_x_m": 2.4013999999999998,
+      "recorded_mean_y_m": -0.75975,
+      "recorded_mean_error_m": 0.38328582350512264,
+      "archived_summary_x_m": 2.401,
+      "archived_summary_y_m": -0.76
+    },
+    {
+      "tag_id": 3,
+      "anchor": false,
+      "accepted_frames": 0,
+      "ground_truth_x_m": 2.7,
+      "ground_truth_y_m": 0.52,
+      "status": "unobserved"
+    }
+  ],
+  "timing": {
+    "zip_load_and_adapter_s": 0.14205489500000112,
+    "synchronization_s": 0.07437759399999777,
+    "before_initialization_s": 0.09284888899946964,
+    "anchored_graph_build_s": 0.09252848899996025,
+    "optimization_s": 16.668881192999834,
+    "baseline_pipeline_s": 0.30928227299955324,
+    "optimized_pipeline_excluding_export_s": 16.977842170999793,
+    "total_driver_including_export_s": 17.81192581399955,
+    "clock": "time.perf_counter, wall seconds; excludes Python startup/imports; one run"
+  },
+  "independent_evaluation": {
+    "status": "evaluated",
+    "tags": [
+      {
+        "family_or_dictionary": "tag16h5",
+        "tag_id": 0,
+        "survey_position_m": [
+          1.2,
+          0.65,
+          0.0
+        ],
+        "status": "evaluated",
+        "initial_error_m": 0.2531041503931559,
+        "optimized_error_m": 0.10491137120809284
+      },
+      {
+        "family_or_dictionary": "tag16h5",
+        "tag_id": 2,
+        "survey_position_m": [
+          2.78,
+          -0.7,
+          0.0
+        ],
+        "status": "evaluated",
+        "initial_error_m": 0.3141121671418109,
+        "optimized_error_m": 0.13134212554457605
+      },
+      {
+        "family_or_dictionary": "tag16h5",
+        "tag_id": 3,
+        "survey_position_m": [
+          2.7,
+          0.52,
+          0.0
+        ],
+        "status": "unobserved"
+      }
+    ],
+    "initial": {
+      "horizontal_rmse_m": 0.28524389957785795,
+      "median_m": 0.2836081587674834,
+      "maximum_m": 0.3141121671418109
+    },
+    "optimized": {
+      "horizontal_rmse_m": 0.11886368190353483,
+      "median_m": 0.11812674837633444,
+      "maximum_m": 0.13134212554457605
+    }
+  },
+  "solver_status": "converged_cost",
+  "source": "/home/maxwell-guico/Downloads/observations.zip",
+  "assumptions": [
+    "NED alignment",
+    "camera mount",
+    "camera validation",
+    "corner order",
+    "tag size",
+    "mount translation_sigma_m",
+    "mount rotation_sigma_rad",
+    "tag size uncertainty",
+    "Axes are start-forward/right/down after rotating native XY and full attitude by minus initial heading.",
+    "Legacy host-derived camera and telemetry epochs; exposure timing not verified; telemetry max bracket gap 1.1 s.",
+    "Assume native PX4 z=0 is floor; start height is a telemetry proxy, not an independent measurement; sigma=0.05 m.",
+    "Calibration is the existing repository 320x240 checkerboard calibration; recording contains no independent calibration identifier.",
+    "Ground truth constrains tag 1 XY only; anchor sigma=0.01 m is assumed, not surveyed uncertainty.",
+    "15 duplicate host-time telemetry snapshots coalesced by retaining the last logged snapshot at each timestamp.",
+    "Old recording acceptance gates preserved; tag 2 has only two accepted frames and remains tentative."
+  ],
+  "baseline_definition": "Existing mapper ray-floor initialization and medoid, before applying any anchor",
+  "backend": "Unmodified tag_mapping.graph.build_graph and tag_mapping.solver.solve"
+}

@@ -46,6 +46,9 @@ static uint8_t    s_traj_id;       /* current upload id, 0 = none / already play
 static uint16_t   s_traj_dt_ms;
 static float      s_traj_org[3];   /* odom position where playback started        */
 static float      s_traj_yaw;
+static bool       s_traj_yaw_follow;   /* 1 = nose follows the path direction (CMD_TRAJ_START flag) */
+#define TRAJ_YAW_RATE_MAX 1.0f         /* rad/s, yaw-follow turn-rate limit                         */
+#define NAV_TICK_MS 50                /* nav_task period; also sets the per-tick yaw limit         */
 static int64_t    s_traj_t0_us;
 
 /* ---------------------------------------------------------------------------
@@ -255,6 +258,24 @@ static void traj_tick(void)
     float hz = 1000.0f / (float)s_traj_dt_ms;
     const traj_pt_t *p0 = &s_traj[i], *p1 = &s_traj[i + 1];
 
+    if (s_traj_yaw_follow) {
+        /* Heading tangent to the path: NED heading = atan2(east, north) of this segment.
+         * Hovers (no motion) keep the last heading; rate limited per navigation tick. */
+        float dx = p1->x - p0->x, dy = p1->y - p0->y;
+        if (dx * dx + dy * dy > 1e-8f) {
+            float want = atan2f(dy, dx);
+            float d = want - s_traj_yaw;
+            while (d >  (float)M_PI) d -= 2.0f * (float)M_PI;
+            while (d < -(float)M_PI) d += 2.0f * (float)M_PI;
+            float lim = TRAJ_YAW_RATE_MAX * (NAV_TICK_MS / 1000.0f);
+            if (d >  lim) d =  lim;
+            if (d < -lim) d = -lim;
+            s_traj_yaw += d;
+            if (s_traj_yaw >  (float)M_PI) s_traj_yaw -= 2.0f * (float)M_PI;
+            if (s_traj_yaw < -(float)M_PI) s_traj_yaw += 2.0f * (float)M_PI;
+        }
+    }
+
     mavlink_set_position_velocity_ned(
         s_traj_org[0] + p0->x + a * (p1->x - p0->x),
         s_traj_org[1] + p0->y + a * (p1->y - p0->y),
@@ -264,7 +285,7 @@ static void traj_tick(void)
 }
 
 /* ---------------------------------------------------------------------------
- * nav_tick — executed every 100 ms (10 Hz) by nav_task
+ * nav_tick — executed every NAV_TICK_MS by nav_task
  * --------------------------------------------------------------------------- */
 /* Goal from this tick's snapshot still active (no HOLD / new goal since)?
  * Call with s_mutex held. */
@@ -441,7 +462,7 @@ void nav_traj_put(uint8_t id, uint16_t total, uint16_t offset,
     if (playing) ESP_LOGW(TAG, "Trajectory chunk ignored — playing");
 }
 
-void nav_traj_start(uint8_t id, uint16_t dt_ms)
+void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags)
 {
     drone_state_t st = mavlink_get_state();
     bool flying = st.armed && st.custom_main_mode == PX4_MAIN_MODE_OFFBOARD
@@ -461,6 +482,7 @@ void nav_traj_start(uint8_t id, uint16_t dt_ms)
         s_traj_org[1] = st.y;
         s_traj_org[2] = st.z;
         s_traj_yaw    = st.heading;
+        s_traj_yaw_follow = (flags & 0x01) != 0;
         s_traj_dt_ms  = dt_ms;
         s_traj_t0_us  = esp_timer_get_time();
         s_traj_id     = 0;              /* consume: a repeated START cannot replay */
@@ -474,8 +496,8 @@ void nav_traj_start(uint8_t id, uint16_t dt_ms)
     if (err) {
         ESP_LOGW(TAG, "Trajectory start refused: %s", err);
     } else {
-        ESP_LOGI(TAG, "Trajectory start: %u pts @ %u ms from odom (%.2f, %.2f, %.2f)",
-                 n, dt_ms, st.x, st.y, st.z);
+        ESP_LOGI(TAG, "Trajectory start: %u pts @ %u ms from odom (%.2f, %.2f, %.2f)%s",
+                 n, dt_ms, st.x, st.y, st.z, (flags & 0x01) ? ", yaw follows path" : "");
     }
 }
 
@@ -527,11 +549,11 @@ void nav_task(void *arg)
 
         /* Skip navigation while WiFi is down */
         if (wifi_discon_tick != 0) {
-            vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(50));
+            vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(NAV_TICK_MS));
             continue;
         }
 
         nav_tick(&vfh_cfg);
-        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(50));
+        vTaskDelayUntil(&last_wake, pdMS_TO_TICKS(NAV_TICK_MS));
     }
 }

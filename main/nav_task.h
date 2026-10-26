@@ -86,10 +86,11 @@ void nav_cancel(void);
 void nav_traj_put(uint8_t id, uint16_t total, uint16_t offset,
                   const void *xyz, int n);
 
-/* Play upload `id` from the current position, one point every dt_ms,
- * holding the current heading. Refused unless the upload is complete and the
- * drone is armed in OFFBOARD. Each upload plays once. Ends in NAV_ARRIVED. */
-void nav_traj_start(uint8_t id, uint16_t dt_ms);
+/* Play upload `id` from the current position, one point every dt_ms.
+ * flags bit0: nose follows the path direction (yaw tangent to the trajectory);
+ * otherwise hold the current heading. Refused unless the upload is complete
+ * and the drone is armed in OFFBOARD. Each upload plays once. Ends in NAV_ARRIVED. */
+void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags);
 
 /* Thread-safe status snapshot. */
 nav_status_t nav_get_status(void);

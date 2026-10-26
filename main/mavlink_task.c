@@ -457,6 +457,22 @@ static void send_speed_limit(void)
 }
 
 // ---------------------------------------------------------------------------
+// Ask PX4 to stream ATTITUDE_QUATERNION (for logging).  Harmless if PX4
+// already streams it; if PX4 refuses, ATTITUDE is used instead.
+// ---------------------------------------------------------------------------
+static void request_attitude_quaternion(void)
+{
+    mavlink_message_t msg;
+    mavlink_msg_command_long_pack(
+        OBC_SYSID, OBC_COMPID, &msg, PX4_SYSID, PX4_COMPID,
+        MAV_CMD_SET_MESSAGE_INTERVAL, 0,
+        (float)MAVLINK_MSG_ID_ATTITUDE_QUATERNION,  // param1: message id
+        20000.0f,                                   // param2: interval us (50 Hz)
+        0, 0, 0, 0, 0);
+    send_message(&msg);
+}
+
+// ---------------------------------------------------------------------------
 // Incoming message parser
 // Drains whatever is in the UART RX buffer and updates s_state.
 // ---------------------------------------------------------------------------
@@ -502,6 +518,7 @@ static void parse_incoming(void)
                 s_state.x  = pos.x;   s_state.y  = pos.y;   s_state.z  = pos.z;
                 s_state.vx = pos.vx;  s_state.vy = pos.vy;  s_state.vz = pos.vz;
                 s_state.enu_z     = -pos.z;   // NED z-down → ENU z-up
+                s_state.pos_boot_ms = pos.time_boot_ms;
                 s_state.last_pos_ms = now_ms;
                 xSemaphoreGive(s_state_mutex);
                 break;
@@ -517,7 +534,42 @@ static void parse_incoming(void)
 
                 xSemaphoreTake(s_state_mutex, portMAX_DELAY);
                 s_state.heading     = heading;
+                s_state.roll        = att.roll;
+                s_state.pitch       = att.pitch;
+                // Use ATTITUDE for rates/quaternion only while no ATTITUDE_QUATERNION
+                // has arrived in the last 500 ms.
+                if (s_state.last_q_ms == 0 || now_ms - s_state.last_q_ms > 500) {
+                    s_state.rollspeed  = att.rollspeed;
+                    s_state.pitchspeed = att.pitchspeed;
+                    s_state.yawspeed   = att.yawspeed;
+                    float cr = cosf(att.roll * 0.5f),  sr = sinf(att.roll * 0.5f);
+                    float cp = cosf(att.pitch * 0.5f), sp = sinf(att.pitch * 0.5f);
+                    float cy = cosf(att.yaw * 0.5f),   sy = sinf(att.yaw * 0.5f);
+                    s_state.q[0] = cr * cp * cy + sr * sp * sy;
+                    s_state.q[1] = sr * cp * cy - cr * sp * sy;
+                    s_state.q[2] = cr * sp * cy + sr * cp * sy;
+                    s_state.q[3] = cr * cp * sy - sr * sp * cy;
+                    s_state.q_from_px4  = 0;
+                    s_state.att_boot_ms = att.time_boot_ms;
+                }
                 s_state.last_att_ms = now_ms;
+                xSemaphoreGive(s_state_mutex);
+                break;
+            }
+
+            case MAVLINK_MSG_ID_ATTITUDE_QUATERNION: {
+                mavlink_attitude_quaternion_t aq;
+                mavlink_msg_attitude_quaternion_decode(&msg, &aq);
+
+                xSemaphoreTake(s_state_mutex, portMAX_DELAY);
+                s_state.q[0] = aq.q1;  s_state.q[1] = aq.q2;
+                s_state.q[2] = aq.q3;  s_state.q[3] = aq.q4;
+                s_state.rollspeed   = aq.rollspeed;
+                s_state.pitchspeed  = aq.pitchspeed;
+                s_state.yawspeed    = aq.yawspeed;
+                s_state.q_from_px4  = 1;
+                s_state.att_boot_ms = aq.time_boot_ms;
+                s_state.last_q_ms   = now_ms;
                 xSemaphoreGive(s_state_mutex);
                 break;
             }
@@ -728,6 +780,7 @@ void mavlink_task(void *arg)
 
     // Send once at task start so PX4 gets a low-speed constraint early.
     send_speed_limit();
+    request_attitude_quaternion();
 
     // ---- 20Hz loop ----
     while (1) {
@@ -746,6 +799,7 @@ void mavlink_task(void *arg)
         // Re-apply speed limit as a guard against stack/mode resets.
         if (now_ms - last_speed_ms >= SPEED_LIMIT_REFRESH_MS) {
             send_speed_limit();
+            request_attitude_quaternion();
             last_speed_ms = now_ms;
         }
 

@@ -1,0 +1,12 @@
+{
+  "python": "3.12.3",
+  "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+  "dependencies": {
+    "numpy": "1.26.4",
+    "scipy": "1.11.4",
+    "OpenCV": "4.6.0",
+    "matplotlib": "3.6.3",
+    "PyYAML": "6.0.1"
+  },
+  "threads": 1
+}

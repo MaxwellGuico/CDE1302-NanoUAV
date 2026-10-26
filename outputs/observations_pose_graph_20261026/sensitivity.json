@@ -1,0 +1,20 @@
+[
+  {
+    "odometry_sigma_scale": 0.5,
+    "tag0_error_m": 0.10491137120809284,
+    "tag2_error_m": 0.13134212554457605,
+    "held_out_rmse_m": 0.11886368190353483
+  },
+  {
+    "odometry_sigma_scale": 1.0,
+    "tag0_error_m": 0.10865377100329077,
+    "tag2_error_m": 0.1271779906961519,
+    "held_out_rmse_m": 0.11827908367658681
+  },
+  {
+    "odometry_sigma_scale": 2.0,
+    "tag0_error_m": 0.1087253169406929,
+    "tag2_error_m": 0.1219234509232047,
+    "held_out_rmse_m": 0.11551303482481366
+  }
+]

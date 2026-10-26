@@ -19,5 +19,12 @@ __pycache__/
 venv/
 .venv/
 
+# Camera calibration photographs captured by laptop/camera_capture.py
+/calibration_images/
+
 # macOS
 .DS_Store
+
+# Raw tag-mapping sessions and offline results
+mapping_runs/
+mapping_results/

@@ -1,0 +1,4 @@
+family_or_dictionary,tag_id,x_m,y_m,z_m,theta_rad,initial_x_m,initial_y_m,initial_theta_rad,anchor,covariance_xytheta,status,solver_status,z_variance,z_variance_reason
+tag16h5,0,0.9826986162360112,0.7797760361565146,0.0,1.6481970388287124,0.9826986162360112,0.7797760361565146,1.6481970388287124,False,,approximate,unobservable_rank_deficient,0.0,exact_assumed_ground_constraint
+tag16h5,1,1.2,-0.7,0.0,1.5985921892441708,1.2,-0.7,1.5985921892441708,True,,approximate,unobservable_rank_deficient,0.0,exact_assumed_ground_constraint
+tag16h5,2,2.475707962137518,-0.7779282313415546,0.0,1.649593585701106,2.475707962137518,-0.7779282313415546,1.649593585701106,False,,approximate,unobservable_rank_deficient,0.0,exact_assumed_ground_constraint

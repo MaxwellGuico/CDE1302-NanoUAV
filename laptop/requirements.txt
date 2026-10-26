@@ -6,3 +6,4 @@ opencv-python>=4.8,<5   # OpenCV 5 changes text metrics: tag_stream's HUD layout
 matplotlib>=3.7
 scipy>=1.10
 pyserial>=3.5
+pymavlink==2.4.49      # Raw mapping recorder; tested with this generated API

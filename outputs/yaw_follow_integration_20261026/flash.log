@@ -1,0 +1,110 @@
+Adding "flash"'s dependency "all" to list of commands with default set of options.
+Executing action: all (aliases: build)
+Running ninja in directory /home/maxwell-guico/cde1302/build
+Executing "ninja all"...
+[1/4] cd /home/maxwell-guico/cde1302/build && /home/maxwell-guico/.espressif/python_env/idf6.0_py3.12_env/bin/python /home/maxwell-guico/.espressif/v6.0.2/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/maxwell-guico/cde1302/build/partition_table/partition-table.bin /home/maxwell-guico/cde1302/build/esp-everything.bin
+esp-everything.bin binary size 0x101740 bytes. Smallest app partition is 0x177000 bytes. 0x758c0 bytes (31%) free.
+[2/4] Performing build step for 'bootloader'
+[1/1] cd /home/maxwell-guico/cde1302/build/bootloader && /home/maxwell-guico/.espressif/python_env/idf6.0_py3.12_env/bin/python /home/maxwell-guico/.espressif/v6.0.2/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/maxwell-guico/cde1302/build/bootloader/bootloader.bin
+Bootloader binary size 0x5240 bytes. 0x2dc0 bytes (36%) free.
+[3/4] No install step for 'bootloader'
+[4/4] Completed 'bootloader'
+Executing action: flash
+Running ninja in directory /home/maxwell-guico/cde1302/build
+Executing "ninja flash"...
+[1/5] cd /home/maxwell-guico/cde1302/build && /home/maxwell-guico/.espressif/python_env/idf6.0_py3.12_env/bin/python /home/maxwell-guico/.espressif/v6.0.2/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 partition --type app /home/maxwell-guico/cde1302/build/partition_table/partition-table.bin /home/maxwell-guico/cde1302/build/esp-everything.bin
+esp-everything.bin binary size 0x101740 bytes. Smallest app partition is 0x177000 bytes. 0x758c0 bytes (31%) free.
+[2/5] Performing build step for 'bootloader'
+[1/1] cd /home/maxwell-guico/cde1302/build/bootloader && /home/maxwell-guico/.espressif/python_env/idf6.0_py3.12_env/bin/python /home/maxwell-guico/.espressif/v6.0.2/esp-idf/components/partition_table/check_sizes.py --offset 0x8000 bootloader 0x0 /home/maxwell-guico/cde1302/build/bootloader/bootloader.bin
+Bootloader binary size 0x5240 bytes. 0x2dc0 bytes (36%) free.
+[3/5] No install step for 'bootloader'
+[4/5] Completed 'bootloader'
+[4/5] Running utility command for flash
+esptool --chip esp32s3 -p /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_E8:F6:0A:8B:A7:54-if00 -b 460800 --before=default-reset --after=hard-reset write-flash --flash-mode dio --flash-freq 80m --flash-size 2MB 0x0 bootloader/bootloader.bin 0x8000 partition_table/partition-table.bin 0x10000 esp-everything.bin
+esptool v5.4.0
+Serial port /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_E8:F6:0A:8B:A7:54-if00:
+Connecting....
+Connected to ESP32-S3 on /dev/serial/by-id/usb-Espressif_USB_JTAG_serial_debug_unit_E8:F6:0A:8B:A7:54-if00:
+Chip type:          ESP32-S3 (QFN56) (revision v0.2)
+Features:           Wi-Fi, BT 5 (LE), Dual Core + LP Core, 240MHz, Embedded PSRAM 8MB (AP_3v3)
+Crystal frequency:  40MHz
+USB mode:           USB-Serial/JTAG
+MAC:                e8:f6:0a:8b:a7:54
+
+Uploading stub flasher...
+Running stub flasher...
+Stub flasher running.
+Changing baud rate to 460800...
+Changed.
+
+Configuring flash size...
+
+Writing 'bootloader/bootloader.bin' at 0x00000000...
+SHA digest in image updated.
+Flash will be erased from 0x00000000 to 0x00005fff...
+Compressed 21056 bytes to 13536...
+Writing at 0x00005240 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.0% 13.22kB/13.22kB [0s] 
+Wrote 21056 bytes (13536 compressed) at 0x00000000 in 0.3 seconds (516.8 kbit/s).
+Verifying written data...
+Hash of data verified.
+
+Writing 'partition_table/partition-table.bin' at 0x00008000...
+Flash will be erased from 0x00008000 to 0x00008fff...
+Compressed 3072 bytes to 105...
+Writing at 0x00008c00 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.0% 105B/105B [0s] 
+Wrote 3072 bytes (105 compressed) at 0x00008000 in 0.0 seconds (571.0 kbit/s).
+Verifying written data...
+Hash of data verified.
+
+Writing 'esp-everything.bin' at 0x00010000...
+Flash will be erased from 0x00010000 to 0x00111fff...
+Compressed 1054528 bytes to 700134...
+Writing at 0x0001c6dc ╸                                2.3% 16.00kB/683.72kB [0s] 
+Writing at 0x00025ab4 ━                                4.7% 32.00kB/683.72kB [0s] 
+Writing at 0x0002cee0 ━━                               7.0% 48.00kB/683.72kB [0s] 
+Writing at 0x0003793c ━━╸                              9.4% 64.00kB/683.72kB [0s] 
+Writing at 0x0003ec73 ━━━╸                            11.7% 80.00kB/683.72kB [0s] 
+Writing at 0x00044831 ━━━━                            14.0% 96.00kB/683.72kB [1s] 
+Writing at 0x0004a22f ━━━━╸                           16.4% 112.00kB/683.72kB [1s] 
+Writing at 0x0004f868 ━━━━━╸                          18.7% 128.00kB/683.72kB [1s] 
+Writing at 0x00054f45 ━━━━━━                          21.1% 144.00kB/683.72kB [1s] 
+Writing at 0x0005b103 ━━━━━━━                         23.4% 160.00kB/683.72kB [1s] 
+Writing at 0x00060a33 ━━━━━━━╸                        25.7% 176.00kB/683.72kB [2s] 
+Writing at 0x00066939 ━━━━━━━━                        28.1% 192.00kB/683.72kB [2s] 
+Writing at 0x0006ca9e ━━━━━━━━━                       30.4% 208.00kB/683.72kB [2s] 
+Writing at 0x000738b4 ━━━━━━━━━╸                      32.8% 224.00kB/683.72kB [2s] 
+Writing at 0x00079516 ━━━━━━━━━━╸                     35.1% 240.00kB/683.72kB [2s] 
+Writing at 0x0007e624 ━━━━━━━━━━━                     37.4% 256.00kB/683.72kB [3s] 
+Writing at 0x00083abf ━━━━━━━━━━━╸                    39.8% 272.00kB/683.72kB [3s] 
+Writing at 0x00088abe ━━━━━━━━━━━━╸                   42.1% 288.00kB/683.72kB [3s] 
+Writing at 0x0008e10f ━━━━━━━━━━━━━                   44.5% 304.00kB/683.72kB [3s] 
+Writing at 0x0009377a ━━━━━━━━━━━━━━                  46.8% 320.00kB/683.72kB [3s] 
+Writing at 0x00098c11 ━━━━━━━━━━━━━━╸                 49.1% 336.00kB/683.72kB [3s] 
+Writing at 0x0009e238 ━━━━━━━━━━━━━━━                 51.5% 352.00kB/683.72kB [3s] 
+Writing at 0x000a3998 ━━━━━━━━━━━━━━━━                53.8% 368.00kB/683.72kB [4s] 
+Writing at 0x000a8e33 ━━━━━━━━━━━━━━━━╸               56.2% 384.00kB/683.72kB [4s] 
+Writing at 0x000adfcc ━━━━━━━━━━━━━━━━━╸              58.5% 400.00kB/683.72kB [4s] 
+Writing at 0x000b3640 ━━━━━━━━━━━━━━━━━━              60.8% 416.00kB/683.72kB [4s] 
+Writing at 0x000b8dd3 ━━━━━━━━━━━━━━━━━━╸             63.2% 432.00kB/683.72kB [4s] 
+Writing at 0x000be1e7 ━━━━━━━━━━━━━━━━━━━╸            65.5% 448.00kB/683.72kB [4s] 
+Writing at 0x000c35eb ━━━━━━━━━━━━━━━━━━━━            67.9% 464.00kB/683.72kB [4s] 
+Writing at 0x000c8b61 ━━━━━━━━━━━━━━━━━━━━━           70.2% 480.00kB/683.72kB [4s] 
+Writing at 0x000ce8d9 ━━━━━━━━━━━━━━━━━━━━━╸          72.5% 496.00kB/683.72kB [5s] 
+Writing at 0x000d3dce ━━━━━━━━━━━━━━━━━━━━━━          74.9% 512.00kB/683.72kB [5s] 
+Writing at 0x000d8ea2 ━━━━━━━━━━━━━━━━━━━━━━━         77.2% 528.00kB/683.72kB [5s] 
+Writing at 0x000ddf4d ━━━━━━━━━━━━━━━━━━━━━━━╸        79.6% 544.00kB/683.72kB [5s] 
+Writing at 0x000e361f ━━━━━━━━━━━━━━━━━━━━━━━━╸       81.9% 560.00kB/683.72kB [5s] 
+Writing at 0x000e8c34 ━━━━━━━━━━━━━━━━━━━━━━━━━       84.2% 576.00kB/683.72kB [5s] 
+Writing at 0x000f0f1e ━━━━━━━━━━━━━━━━━━━━━━━━━╸      86.6% 592.00kB/683.72kB [5s] 
+Writing at 0x000f65e9 ━━━━━━━━━━━━━━━━━━━━━━━━━━╸     88.9% 608.00kB/683.72kB [6s] 
+Writing at 0x000fc19f ━━━━━━━━━━━━━━━━━━━━━━━━━━━     91.3% 624.00kB/683.72kB [6s] 
+Writing at 0x00102698 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━    93.6% 640.00kB/683.72kB [6s] 
+Writing at 0x0010832c ━━━━━━━━━━━━━━━━━━━━━━━━━━━━╸   95.9% 656.00kB/683.72kB [6s] 
+Writing at 0x0010d2f9 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━   98.3% 672.00kB/683.72kB [6s] 
+Writing at 0x00111740 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 100.0% 683.72kB/683.72kB [6s] 
+Wrote 1054528 bytes (700134 compressed) at 0x00010000 in 6.8 seconds (1234.1 kbit/s).
+Verifying written data...
+Hash of data verified.
+
+Hard resetting via RTS pin...
+Done

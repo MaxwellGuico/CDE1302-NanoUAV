@@ -1,0 +1,31 @@
+{
+  "integration_scope": "Firmware C and required headers only; Python files unchanged",
+  "changed_files": [
+    "main/nav_task.c",
+    "main/nav_task.h",
+    "main/wifi_task.c"
+  ],
+  "board": "ESP32-S3",
+  "serial_port": "/dev/ttyACM0",
+  "usb_id": "E8:F6:0A:8B:A7:54",
+  "drone_id": 5,
+  "drone_ip": "172.20.10.5",
+  "idf_version": "v6.0.2 (existing installed toolchain)",
+  "build_success": true,
+  "flash_success": true,
+  "flash_integrity": "Hash of data verified",
+  "yaw_rate_limit_rad_s": 1.0,
+  "nav_tick_ms": 50,
+  "host_c_checks": "passed: legacy packet, yaw flag, rate limit, hover, angle wrap, invalid packet, flight/arming gates, completion",
+  "sdkconfig_unchanged": true,
+  "sha256": {
+    "main/nav_task.c": "9df7385aa0554bae90ba05240f98447301bb1808b324649ee055b590af3126cb",
+    "main/nav_task.h": "f4141b3b749d0ebc7d01c9849d38ecff66a62964b304204ae791efc19d6a0419",
+    "main/wifi_task.c": "66a5c2dac7f1f3255aeec2b787c941c6ccc0320ebed5207c4e3c0ec648d9ebfa",
+    "build/esp-everything.bin": "67315e3a04fdc00d5fc24c2587e55520a02b19e858ebbb35c5c509901d1a9eee",
+    "build/esp-everything.elf": "1b3be97bf80417afb13174b9c79c0e3add44cd4f18f598d6f15e29d75846a80e"
+  },
+  "boot_verified": true,
+  "boot_panic_detected": false,
+  "boot_log_elf_hash_matches": true
+}

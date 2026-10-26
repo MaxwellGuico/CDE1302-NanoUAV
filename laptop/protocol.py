@@ -59,10 +59,20 @@ NAV_STATE_NAMES = {
 # Telemetry packet
 # ---------------------------------------------------------------------------
 
-# Wire format: pkt_type, drone_id, ned_x, ned_y, heading_rad,
-#              nav_state, tag_id, tag_dist_m, vfh_blocked[32], is_stuck, reloc_age_s
+# Wire format begins with the legacy 55-byte packet. New firmware appends PX4
+# link health, local Z/velocity, and full attitude; appending the extensions lets
+# new laptop code read old firmware and old laptop code ignore the extra bytes.
 _TELEM_HDR_FMT  = "<BBfffBbf32sBH"
 _TELEM_HDR_SIZE = struct.calcsize(_TELEM_HDR_FMT)   # 55 bytes
+_TELEM_STATUS_FMT = "<HHHBBB"
+_TELEM_STATUS_SIZE = struct.calcsize(_TELEM_STATUS_FMT)  # 9 bytes
+_TELEM_STATUS_V0_FMT = "<HHBBB"
+_TELEM_STATUS_V0_SIZE = struct.calcsize(_TELEM_STATUS_V0_FMT)  # 7 bytes
+_TELEM_KIN_FMT = "<ffff"
+_TELEM_KIN_SIZE = struct.calcsize(_TELEM_KIN_FMT)        # 16 bytes
+# Matches extension 2 in wifi_telem_pkt_t (main/wifi_task.h).
+_TELEM_ATT_FMT = "<9fIIB"
+_TELEM_ATT_SIZE = struct.calcsize(_TELEM_ATT_FMT)        # 45 bytes
 
 
 @dataclass
@@ -77,6 +87,28 @@ class TelemetryPacket:
     vfh_blocked: list            # VFH_BINS bools
     is_stuck:    bool
     reloc_age_s: int              # seconds since last nav-tag fix (0xFFFF = never)
+    px4_hb_age_ms: Optional[int] = None
+    px4_pos_age_ms: Optional[int] = None
+    px4_att_age_ms: Optional[int] = None
+    px4_link_ok: Optional[bool] = None
+    px4_armed: Optional[int] = None
+    px4_custom_main_mode: Optional[int] = None
+    ned_z: Optional[float] = None
+    ned_vx: Optional[float] = None
+    ned_vy: Optional[float] = None
+    ned_vz: Optional[float] = None
+    q_w: Optional[float] = None
+    q_x: Optional[float] = None
+    q_y: Optional[float] = None
+    q_z: Optional[float] = None
+    roll_rate: Optional[float] = None
+    pitch_rate: Optional[float] = None
+    yaw_rate: Optional[float] = None
+    roll_rad: Optional[float] = None
+    pitch_rad: Optional[float] = None
+    px4_pos_boot_ms: Optional[int] = None
+    px4_att_boot_ms: Optional[int] = None
+    q_from_px4: Optional[int] = None
 
     @property
     def nav_state_name(self) -> str:
@@ -98,6 +130,27 @@ def parse_telemetry(data: bytes) -> Optional[TelemetryPacket]:
 
     vfh_blocked = [bool(b) for b in vfh_raw]
 
+    status = (None, None, None, None, None, None)
+    status_end = _TELEM_HDR_SIZE + _TELEM_STATUS_SIZE
+    if len(data) >= status_end:
+        hb_age, pos_age, att_age, link_ok, armed, main_mode = struct.unpack_from(
+            _TELEM_STATUS_FMT, data, _TELEM_HDR_SIZE)
+        status = (hb_age, pos_age, att_age, bool(link_ok), armed, main_mode)
+    elif len(data) >= _TELEM_HDR_SIZE + _TELEM_STATUS_V0_SIZE:
+        hb_age, pos_age, armed, main_mode, _sub_mode = struct.unpack_from(
+            _TELEM_STATUS_V0_FMT, data, _TELEM_HDR_SIZE)
+        status = (hb_age, pos_age, None,
+                  hb_age < 2000 and pos_age < 500, armed, main_mode)
+
+    kinematics = (None, None, None, None)
+    if len(data) >= status_end + _TELEM_KIN_SIZE:
+        kinematics = struct.unpack_from(_TELEM_KIN_FMT, data, status_end)
+
+    attitude = (None,) * 12
+    attitude_start = status_end + _TELEM_KIN_SIZE
+    if len(data) >= attitude_start + _TELEM_ATT_SIZE:
+        attitude = struct.unpack_from(_TELEM_ATT_FMT, data, attitude_start)
+
     return TelemetryPacket(
         drone_id    = drone_id,
         ned_x       = ned_x,
@@ -109,6 +162,28 @@ def parse_telemetry(data: bytes) -> Optional[TelemetryPacket]:
         vfh_blocked = vfh_blocked,
         is_stuck    = bool(is_stuck),
         reloc_age_s = reloc_age_s,
+        px4_hb_age_ms = status[0],
+        px4_pos_age_ms = status[1],
+        px4_att_age_ms = status[2],
+        px4_link_ok = status[3],
+        px4_armed = status[4],
+        px4_custom_main_mode = status[5],
+        ned_z = kinematics[0],
+        ned_vx = kinematics[1],
+        ned_vy = kinematics[2],
+        ned_vz = kinematics[3],
+        q_w = attitude[0],
+        q_x = attitude[1],
+        q_y = attitude[2],
+        q_z = attitude[3],
+        roll_rate = attitude[4],
+        pitch_rate = attitude[5],
+        yaw_rate = attitude[6],
+        roll_rad = attitude[7],
+        pitch_rad = attitude[8],
+        px4_pos_boot_ms = attitude[9],
+        px4_att_boot_ms = attitude[10],
+        q_from_px4 = attitude[11],
     )
 
 # ---------------------------------------------------------------------------

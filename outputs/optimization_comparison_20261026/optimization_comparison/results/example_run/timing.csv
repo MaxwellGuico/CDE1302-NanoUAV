@@ -1,0 +1,11 @@
+operation,wall_time_s
+zip_load_and_adapter_s,0.10149396200006322
+synchronization_s,0.06511489900003653
+before_initialization_s,0.09946086900004047
+anchored_graph_build_s,0.09149319900006958
+optimization_s,15.875462447000018
+before_calculation_s,0.09946086900004047
+after_calculation_s,15.966955646000088
+baseline_pipeline_s,0.2660697300001402
+optimized_pipeline_excluding_export_s,16.133564507000187
+total_driver_including_export_s,19.774775694000027

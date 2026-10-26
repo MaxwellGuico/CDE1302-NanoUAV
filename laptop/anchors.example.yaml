@@ -1,0 +1,13 @@
+# Match by exact family + decoded ID. Enter surveyed CENTRE coordinates and
+# uncertainties in metres, then enable. These nulls are not measurements.
+known_tags:
+  - enabled: false
+    family_or_dictionary: tag16h5
+    tag_id: 0
+    frame: ground_start_NED
+    prior_type: position_xy
+    position_m: [null, null, 0.0]
+    position_sigma_xy_m: [null, null]
+    surveyed_yaw_rad: null
+    surveyed_yaw_sigma_rad: null
+    measurement_notes: "Replace with survey date, method, and reference frame"

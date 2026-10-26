@@ -52,6 +52,27 @@ typedef struct __attribute__((packed)) {
     uint8_t  is_stuck;                      /* 1 = STUCK or RETREATING          */
 
     uint16_t reloc_age_s;                   /* always 0xFFFF (no nav-tag fixes) */
+
+    /* Appended extension. Keep legacy fields above in their original order. */
+    uint16_t px4_hb_age_ms;
+    uint16_t px4_pos_age_ms;
+    uint16_t px4_att_age_ms;
+    uint8_t  px4_link_ok;
+    uint8_t  px4_armed;
+    uint8_t  px4_custom_main_mode;
+
+    float    ned_z;                         /* NED down (m), odom frame          */
+    float    ned_vx;                        /* NED north velocity (m/s)          */
+    float    ned_vy;                        /* NED east velocity (m/s)           */
+    float    ned_vz;                        /* NED down velocity (m/s)            */
+
+    /* Appended extension 2: full PX4 attitude for logging (raw PX4 values). */
+    float    q_w, q_x, q_y, q_z;            /* attitude quaternion (body FRD -> NED) */
+    float    roll_rate, pitch_rate, yaw_rate; /* body rates (rad/s)               */
+    float    roll_rad, pitch_rad;           /* from ATTITUDE                      */
+    uint32_t px4_pos_boot_ms;               /* PX4 time_boot_ms of position sample */
+    uint32_t px4_att_boot_ms;               /* PX4 time_boot_ms of attitude sample */
+    uint8_t  q_from_px4;                    /* 1 = ATTITUDE_QUATERNION, 0 = from euler */
 } wifi_telem_pkt_t;
 
 /* ---------------------------------------------------------------------------
