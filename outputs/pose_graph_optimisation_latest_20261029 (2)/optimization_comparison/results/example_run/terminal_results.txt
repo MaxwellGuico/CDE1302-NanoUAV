@@ -1,0 +1,27 @@
+Before and after optimisation (positions/errors: metres; time: seconds)
+Solver status: converged_cost
+
+Tag   Stage    Pred X     Pred Y   Truth X    Truth Y    Error X    Error Y  XY error    Batch s
+---  ------  --------  ---------  --------  ---------  ---------  ---------  --------  ---------
+  0  before  0.982699   0.779776  1.200000   0.650000  -0.217301   0.129776  0.253104   0.099461
+  0   after  1.281627   0.721713  1.200000   0.650000   0.081627   0.071713  0.108654  15.966956
+  1  before  0.945091  -0.610802  1.200000  -0.700000  -0.254909   0.089198  0.270064   0.099461
+  1   after  1.199966  -0.699985  1.200000  -0.700000  -0.000034   0.000015  0.000038  15.966956
+  2  before  2.475708  -0.777928  2.780000  -0.700000  -0.304292  -0.077928  0.314112   0.099461
+  2   after  2.750942  -0.823814  2.780000  -0.700000  -0.029058  -0.123814  0.127178  15.966956
+  3  before       n/a        n/a  2.700000   0.520000        n/a        n/a       n/a   0.099461
+  3   after       n/a        n/a  2.700000   0.520000        n/a        n/a       n/a  15.966956
+
+Signed errors = prediction - ground truth. XY error = hypot(error X, error Y).
+Batch s: before = unanchored initialisation; after = anchored graph build + solve.
+Each batch time is repeated for all tags; do not sum it across rows.
+Including shared input preparation/synchronisation: before 0.266070 s; after 16.133565 s.
+Python startup/imports and result export are excluded from pipeline times.
+Anchor tag(s): 1. Anchor error is a fit diagnostic, not independent accuracy.
+Before uses floor-ray initialisation before any anchor is applied.
+Approximate replay: exposure timing and floor datum are unverified.
+Tag 2: tentative_two_frames (2 accepted frames).
+Tag 3: unobserved (0 accepted frames).
+
+CSV results: /home/maxwell-guico/cde1302/outputs/optimization_comparison_20261026/results/example_run/results.csv
+Timing breakdown: /home/maxwell-guico/cde1302/outputs/optimization_comparison_20261026/results/example_run/timing.csv

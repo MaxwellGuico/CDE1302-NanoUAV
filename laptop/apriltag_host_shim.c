@@ -87,7 +87,7 @@ void ath_detector_destroy(void *handle)
 }
 
 /* How many IDs this family can decode — guards against an ncodes that overruns
- * the truncated tag16h5 code table. */
+ * the tag16h5 code table. */
 int ath_family_ncodes(void *handle)
 {
     ath_handle_t *h = (ath_handle_t *)handle;

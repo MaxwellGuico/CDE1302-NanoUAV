@@ -47,8 +47,16 @@ static uint16_t   s_traj_dt_ms;
 static float      s_traj_org[3];   /* odom position where playback started        */
 static float      s_traj_yaw;
 static bool       s_traj_yaw_follow;   /* 1 = nose follows the path direction (CMD_TRAJ_START flag) */
-#define TRAJ_YAW_RATE_MAX 1.0f         /* rad/s, yaw-follow turn-rate limit                         */
-#define NAV_TICK_MS 50                /* nav_task period; also sets the per-tick yaw limit         */
+static uint16_t   s_traj_out_from;     /* points [from, to): nose 90 deg right of travel (flag bit1) */
+static uint16_t   s_traj_out_to;       /* from == to = no outward window                            */
+static float      s_traj_yaw_want;     /* heading the nose is turning towards                       */
+static float      s_traj_yaw_rate;     /* current turn rate (rad/s), ramped                          */
+static int64_t    s_traj_last_us;      /* previous traj_tick, for the real tick length              */
+static float      s_yaw_rate_max;      /* rad/s                                                    */
+static float      s_yaw_acc_max;       /* rad/s^2                                                  */
+#define TRAJ_YAW_RATE_DEF_DPS  30      /* deg/s if the laptop sends no limit                        */
+#define TRAJ_YAW_ACC_DEF_DPS2  30      /* deg/s^2 if the laptop sends no limit                      */
+#define NAV_TICK_MS 50                /* nav_task period                                          */
 static int64_t    s_traj_t0_us;
 
 /* ---------------------------------------------------------------------------
@@ -258,22 +266,32 @@ static void traj_tick(void)
     float hz = 1000.0f / (float)s_traj_dt_ms;
     const traj_pt_t *p0 = &s_traj[i], *p1 = &s_traj[i + 1];
 
-    if (s_traj_yaw_follow) {
-        /* Heading tangent to the path: NED heading = atan2(east, north) of this segment.
-         * Hovers (no motion) keep the last heading; rate limited per navigation tick. */
+    /* Measure the real tick length, using the nominal period on the first tick
+     * or after an unusually long gap. */
+    int64_t now_us = esp_timer_get_time();
+    float nominal_dt = NAV_TICK_MS / 1000.0f;
+    float dt = (s_traj_last_us > 0) ? (float)(now_us - s_traj_last_us) * 1e-6f : nominal_dt;
+    if (dt <= 0.0f || dt > 0.5f) dt = nominal_dt;
+    s_traj_last_us = now_us;
+
+    bool in_out = (i >= (int)s_traj_out_from && i < (int)s_traj_out_to);
+    if (s_traj_yaw_follow || in_out) {
+        /* NED heading follows this segment, plus 90 deg to the right inside
+         * the outward window. Stationary segments retain the last target.
+         * Ramp the yaw rate, with a braking target based on remaining angle. */
         float dx = p1->x - p0->x, dy = p1->y - p0->y;
         if (dx * dx + dy * dy > 1e-8f) {
-            float want = atan2f(dy, dx);
-            float d = want - s_traj_yaw;
-            while (d >  (float)M_PI) d -= 2.0f * (float)M_PI;
-            while (d < -(float)M_PI) d += 2.0f * (float)M_PI;
-            float lim = TRAJ_YAW_RATE_MAX * (NAV_TICK_MS / 1000.0f);
-            if (d >  lim) d =  lim;
-            if (d < -lim) d = -lim;
-            s_traj_yaw += d;
-            if (s_traj_yaw >  (float)M_PI) s_traj_yaw -= 2.0f * (float)M_PI;
-            if (s_traj_yaw < -(float)M_PI) s_traj_yaw += 2.0f * (float)M_PI;
+            s_traj_yaw_want = wrap_pi(atan2f(dy, dx) + (in_out ? 0.5f * (float)M_PI : 0.0f));
         }
+        float d      = wrap_pi(s_traj_yaw_want - s_traj_yaw);
+        float v_des  = fminf(s_yaw_rate_max, sqrtf(2.0f * s_yaw_acc_max * fabsf(d)));
+        if (v_des * dt > fabsf(d)) v_des = fabsf(d) / dt;
+        v_des = copysignf(v_des, d);
+        float dv = v_des - s_traj_yaw_rate, dv_max = s_yaw_acc_max * dt;
+        if (dv >  dv_max) dv =  dv_max;
+        if (dv < -dv_max) dv = -dv_max;
+        s_traj_yaw_rate += dv;
+        s_traj_yaw = wrap_pi(s_traj_yaw + s_traj_yaw_rate * dt);
     }
 
     mavlink_set_position_velocity_ned(
@@ -462,7 +480,8 @@ void nav_traj_put(uint8_t id, uint16_t total, uint16_t offset,
     if (playing) ESP_LOGW(TAG, "Trajectory chunk ignored — playing");
 }
 
-void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags)
+void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags, uint16_t out_from, uint16_t out_to,
+                    uint8_t yaw_rate_dps, uint8_t yaw_acc_dps2)
 {
     drone_state_t st = mavlink_get_state();
     bool flying = st.armed && st.custom_main_mode == PX4_MAIN_MODE_OFFBOARD
@@ -483,6 +502,13 @@ void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags)
         s_traj_org[2] = st.z;
         s_traj_yaw    = st.heading;
         s_traj_yaw_follow = (flags & 0x01) != 0;
+        s_traj_out_from   = (flags & 0x02) ? out_from : 0;
+        s_traj_out_to     = (flags & 0x02) ? out_to   : 0;
+        s_traj_yaw_want   = st.heading;
+        s_traj_yaw_rate   = 0.0f;
+        s_traj_last_us    = 0;
+        s_yaw_rate_max = (float)(yaw_rate_dps ? yaw_rate_dps : TRAJ_YAW_RATE_DEF_DPS) * (float)M_PI / 180.0f;
+        s_yaw_acc_max  = (float)(yaw_acc_dps2 ? yaw_acc_dps2 : TRAJ_YAW_ACC_DEF_DPS2) * (float)M_PI / 180.0f;
         s_traj_dt_ms  = dt_ms;
         s_traj_t0_us  = esp_timer_get_time();
         s_traj_id     = 0;              /* consume: a repeated START cannot replay */
@@ -496,8 +522,11 @@ void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags)
     if (err) {
         ESP_LOGW(TAG, "Trajectory start refused: %s", err);
     } else {
-        ESP_LOGI(TAG, "Trajectory start: %u pts @ %u ms from odom (%.2f, %.2f, %.2f)%s",
-                 n, dt_ms, st.x, st.y, st.z, (flags & 0x01) ? ", yaw follows path" : "");
+        ESP_LOGI(TAG, "Trajectory start: %u pts @ %u ms from odom (%.2f, %.2f, %.2f)%s%s, yaw <= %u deg/s, %u deg/s^2",
+                 n, dt_ms, st.x, st.y, st.z, (flags & 0x01) ? ", yaw follows path" : "",
+                 (flags & 0x02) ? ", nose outward in a window" : "",
+                 yaw_rate_dps ? yaw_rate_dps : TRAJ_YAW_RATE_DEF_DPS,
+                 yaw_acc_dps2 ? yaw_acc_dps2 : TRAJ_YAW_ACC_DEF_DPS2);
     }
 }
 
@@ -510,7 +539,7 @@ nav_status_t nav_get_status(void)
 }
 
 /* ---------------------------------------------------------------------------
- * FreeRTOS task — 10 Hz navigation loop
+ * FreeRTOS task — 20 Hz navigation loop
  * --------------------------------------------------------------------------- */
 
 void nav_task(void *arg)

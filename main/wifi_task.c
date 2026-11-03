@@ -309,7 +309,9 @@ static void handle_traj_data(const uint8_t *buf, int len)
     nav_traj_put(buf[2], total, offset, buf + 8, n);
 }
 
-/* CMD_TRAJ_START: pkt, cmd, id, dt_ms(u16), optional flags(u8; bit0=yaw-follow) */
+/* CMD_TRAJ_START: pkt, cmd, id, dt_ms(u16), optional flags(u8; bit0=yaw-follow,
+ * bit1=outward window), out_from(u16), out_to(u16), yaw_rate(u8), yaw_acc(u8).
+ * Window ends are point indices; yaw limits are deg/s and deg/s^2 (0=default). */
 static void handle_traj_start(const uint8_t *buf, int len)
 {
     if (len < 5) return;
@@ -320,7 +322,17 @@ static void handle_traj_start(const uint8_t *buf, int len)
     uint16_t dt_ms;
     memcpy(&dt_ms, buf + 3, sizeof(dt_ms));
     uint8_t flags = (len >= 6) ? buf[5] : 0;     /* optional: bit0 = yaw follows path */
-    nav_traj_start(buf[2], dt_ms, flags);
+    uint16_t out_from = 0, out_to = 0;
+    uint8_t yaw_rate = 0, yaw_acc = 0;
+    if (len >= 10) {
+        memcpy(&out_from, buf + 6, sizeof(out_from));
+        memcpy(&out_to,   buf + 8, sizeof(out_to));
+    }
+    if (len >= 12) {
+        yaw_rate = buf[10];
+        yaw_acc  = buf[11];
+    }
+    nav_traj_start(buf[2], dt_ms, flags, out_from, out_to, yaw_rate, yaw_acc);
 }
 
 wifi_peer_list_t wifi_get_peers(void)

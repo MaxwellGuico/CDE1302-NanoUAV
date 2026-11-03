@@ -1,0 +1,21 @@
+{
+  "run_id": "legacy-f51b456baa9c4fee",
+  "segment_id": 0,
+  "fc_time_ns": 1792985863537751000,
+  "host_receive_ns": 1792985863537751000,
+  "coordinate_convention": "NED",
+  "native_position_m": [
+    0.0,
+    0.0,
+    -0.02463
+  ],
+  "quaternion_xyzw": [
+    0.008244365782428086,
+    0.018280834086097465,
+    -0.0001346031964776454,
+    0.9997988914876539
+  ],
+  "initial_body_height_above_floor_m": 0.02463,
+  "initial_body_height_sigma_m": 0.05,
+  "datum_source": "APPROXIMATE: ORIGIN_SET XY; assume native PX4 z=0 is floor; height is telemetry-derived"
+}

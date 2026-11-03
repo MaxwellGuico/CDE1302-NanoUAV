@@ -59,8 +59,11 @@ def render(dictionary, tag_id, side=TAG_PX, x0=TAG_X0, y0=TAG_Y0, img=None):
     """One marker on a white quiet zone, as a contiguous uint8 (H, W)."""
     if img is None:
         img = np.full((IMG_H, IMG_W), 255, np.uint8)
-    img[y0:y0 + side, x0:x0 + side] = cv2.aruco.generateImageMarker(
-        dictionary, tag_id, side)
+    # OpenCV 4.6 uses drawMarker; newer versions use generateImageMarker.
+    marker = getattr(cv2.aruco, "generateImageMarker", None)
+    if marker is None:
+        marker = cv2.aruco.drawMarker
+    img[y0:y0 + side, x0:x0 + side] = marker(dictionary, tag_id, side)
     return img
 
 
@@ -145,33 +148,20 @@ def test_windows_refuses_visual_studio_cl(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# The truncated tag16h5 family (regression guard for the ncodes bug:
+# The complete tag16h5 family (regression guard for the ncodes bug:
 # codedata[] held 20 entries while ncodes said 30, so IDs 20-29 read past the
 # end of the table and could never be decoded).
 # ---------------------------------------------------------------------------
 
 def test_family_ncodes_matches_the_code_table(detector):
-    assert detector.ncodes == EXPECTED_NCODES == 22
+    assert detector.ncodes == EXPECTED_NCODES == 30
 
 
-@pytest.mark.parametrize("tag_id", [0, 1, 5, 11, 12, 19])
+@pytest.mark.parametrize("tag_id", range(30))
 def test_tags_decode(detector, dictionary, tag_id):
     dets = detector.detect(render(dictionary, tag_id))
     assert [d.id for d in dets] == [tag_id]
     assert dets[0].hamming == 0
-
-
-@pytest.mark.parametrize("tag_id", [20, 21])
-def test_nav_tags_20_and_21_decode(detector, dictionary, tag_id):
-    """These are the IDs the ncodes bug made undetectable."""
-    dets = detector.detect(render(dictionary, tag_id))
-    assert [d.id for d in dets] == [tag_id]
-
-
-@pytest.mark.parametrize("tag_id", [22, 25, 29])
-def test_ids_outside_the_truncated_table_are_not_detected(detector, dictionary,
-                                                          tag_id):
-    assert detector.detect(render(dictionary, tag_id)) == []
 
 
 def test_blank_image_detects_nothing(detector):

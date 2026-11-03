@@ -88,9 +88,13 @@ void nav_traj_put(uint8_t id, uint16_t total, uint16_t offset,
 
 /* Play upload `id` from the current position, one point every dt_ms.
  * flags bit0: nose follows the path direction (yaw tangent to the trajectory);
- * otherwise hold the current heading. Refused unless the upload is complete
+ * flags bit1: aim 90 deg right of travel for point indices [out_from, out_to).
+ * Outside that window, bit0 selects path following or holding the last heading.
+ * yaw_rate_dps / yaw_acc_dps2: deg/s and deg/s^2; 0 selects defaults (30 each).
+ * Refused unless the upload is complete
  * and the drone is armed in OFFBOARD. Each upload plays once. Ends in NAV_ARRIVED. */
-void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags);
+void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags, uint16_t out_from, uint16_t out_to,
+                    uint8_t yaw_rate_dps, uint8_t yaw_acc_dps2);
 
 /* Thread-safe status snapshot. */
 nav_status_t nav_get_status(void);
