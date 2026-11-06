@@ -98,8 +98,9 @@ static void wifi_event_handler(void *arg, esp_event_base_t base,
                                int32_t event_id, void *data)
 {
     if (base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_event_sta_disconnected_t *event = data;
         s_wifi_connected = false;
-        ESP_LOGW(TAG, "Disconnected — reconnecting...");
+        ESP_LOGW(TAG, "Wi-Fi disconnect reason: %u", event->reason);
         esp_wifi_connect();
     } else if (base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *e = (ip_event_got_ip_t *)data;
