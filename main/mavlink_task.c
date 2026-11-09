@@ -473,6 +473,21 @@ static void request_attitude_quaternion(void)
 }
 
 // ---------------------------------------------------------------------------
+// Request 10 Hz position updates for the laptop correction loop and tag positions.
+// ---------------------------------------------------------------------------
+static void request_local_position(void)
+{
+    mavlink_message_t msg;
+    mavlink_msg_command_long_pack(
+        OBC_SYSID, OBC_COMPID, &msg, PX4_SYSID, PX4_COMPID,
+        MAV_CMD_SET_MESSAGE_INTERVAL, 0,
+        (float)MAVLINK_MSG_ID_LOCAL_POSITION_NED,   // param1: message id
+        100000.0f,                               // param2: interval us (10 Hz)
+        0, 0, 0, 0, 0);
+    send_message(&msg);
+}
+
+// ---------------------------------------------------------------------------
 // Incoming message parser
 // Drains whatever is in the UART RX buffer and updates s_state.
 // ---------------------------------------------------------------------------
@@ -781,6 +796,7 @@ void mavlink_task(void *arg)
     // Send once at task start so PX4 gets a low-speed constraint early.
     send_speed_limit();
     request_attitude_quaternion();
+    request_local_position();
 
     // ---- 20Hz loop ----
     while (1) {
@@ -800,6 +816,7 @@ void mavlink_task(void *arg)
         if (now_ms - last_speed_ms >= SPEED_LIMIT_REFRESH_MS) {
             send_speed_limit();
             request_attitude_quaternion();
+            request_local_position();
             last_speed_ms = now_ms;
         }
 

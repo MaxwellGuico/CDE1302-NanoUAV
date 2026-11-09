@@ -98,3 +98,13 @@ void nav_traj_start(uint8_t id, uint16_t dt_ms, uint8_t flags, uint16_t out_from
 
 /* Thread-safe status snapshot. */
 nav_status_t nav_get_status(void);
+
+/* Laptop correction loop (CMD_TRAJ_NUDGE): an offset (m, NED north/east) added to every
+ * trajectory setpoint. The vector (*n, *e) is clamped to NAV_NUDGE_MAX_M in magnitude
+ * in place; optional *applied_n/e get the offset in use right now. During playback it
+ * moves towards the target at <= 0.15 m/s, or towards zero after 1.5 s without updates.
+ * The final hold retains the last applied offset. Thread-safe. */
+#define NAV_NUDGE_MAX_M 0.40f
+void nav_set_traj_nudge(float *n, float *e, float *applied_n, float *applied_e);
+/* Back to no offset at once (take-off). */
+void nav_reset_traj_nudge(void);

@@ -170,6 +170,7 @@ static void handle_command(const wifi_cmd_pkt_t *cmd)
             break;
         }
         s_phase = MISSION_BUSY;   /* one START per flight */
+        nav_reset_traj_nudge();   /* no correction offset left over from a previous flight */
         s_start_requested = true;
         ESP_LOGI(TAG, "CMD_START");
         break;
@@ -309,6 +310,24 @@ static void handle_traj_data(const uint8_t *buf, int len)
     nav_traj_put(buf[2], total, offset, buf + 8, n);
 }
 
+/* CMD_TRAJ_NUDGE: pkt, cmd, north(f32), east(f32). Reply to the sender with
+ * "ENDG", the clamped target offset, and the offset currently in use (four f32). */
+static void handle_traj_nudge(const uint8_t *buf, int len, int sock, const struct sockaddr_in *src)
+{
+    if (len < 10) return;
+    float n, e, an = 0.0f, ae = 0.0f;
+    memcpy(&n, buf + 2, sizeof(n));
+    memcpy(&e, buf + 6, sizeof(e));
+    nav_set_traj_nudge(&n, &e, &an, &ae);
+    uint8_t r[20];
+    memcpy(r,      "ENDG", 4);
+    memcpy(r + 4,  &n,  4);
+    memcpy(r + 8,  &e,  4);
+    memcpy(r + 12, &an, 4);
+    memcpy(r + 16, &ae, 4);
+    sendto(sock, r, sizeof(r), 0, (const struct sockaddr *)src, sizeof(*src));
+}
+
 /* CMD_TRAJ_START: pkt, cmd, id, dt_ms(u16), optional flags(u8; bit0=yaw-follow,
  * bit1=outward window), out_from(u16), out_to(u16), yaw_rate(u8), yaw_acc(u8).
  * Window ends are point indices; yaw limits are deg/s and deg/s^2 (0=default). */
@@ -429,6 +448,8 @@ void wifi_task(void *arg)
                     handle_nav_tags(cmd_buf, len);
                 } else if (cmd_buf[1] == CMD_SET_PEERS) {
                     handle_peers(cmd_buf, len);
+                } else if (cmd_buf[1] == CMD_TRAJ_NUDGE) {
+                    handle_traj_nudge(cmd_buf, len, rx_sock, &source);
                 } else if (len >= (int)sizeof(wifi_cmd_pkt_t)) {
                     handle_command((const wifi_cmd_pkt_t *)cmd_buf);
                 }

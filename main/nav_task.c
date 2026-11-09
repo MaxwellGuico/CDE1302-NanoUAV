@@ -37,6 +37,13 @@ static nav_internal_t    s_nav;
 static nav_status_t      s_status;
 static SemaphoreHandle_t s_mutex;
 
+/* Laptop correction loop (CMD_TRAJ_NUDGE), guarded by s_mutex. */
+#define NUDGE_RATE_MPS   0.15f          /* the offset in use moves at most this fast     */
+#define NUDGE_STALE_US   1500000        /* no new offset for this long -> slide back to 0 */
+static float   s_nudge_tgt[2];          /* last offset the laptop sent (north, east), m  */
+static float   s_nudge[2];              /* offset added to the setpoints now             */
+static int64_t s_nudge_us;              /* when the last one arrived                     */
+
 /* Uploaded trajectory. Only written while not playing (checked under s_mutex). */
 typedef struct { float x, y, z; } traj_pt_t;
 
@@ -238,6 +245,48 @@ static bool collision_avoid(float goal_z)
 }
 
 /* ---------------------------------------------------------------------------
+ * Laptop correction loop
+ * --------------------------------------------------------------------------- */
+void nav_set_traj_nudge(float *n, float *e, float *applied_n, float *applied_e)
+{
+    if (!isfinite(*n) || !isfinite(*e)) { *n = 0.0f; *e = 0.0f; }
+    float m = sqrtf(*n * *n + *e * *e);
+    if (m > NAV_NUDGE_MAX_M) { *n *= NAV_NUDGE_MAX_M / m; *e *= NAV_NUDGE_MAX_M / m; }
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    s_nudge_tgt[0] = *n;
+    s_nudge_tgt[1] = *e;
+    s_nudge_us     = esp_timer_get_time();
+    if (applied_n) *applied_n = s_nudge[0];
+    if (applied_e) *applied_e = s_nudge[1];
+    xSemaphoreGive(s_mutex);
+}
+
+void nav_reset_traj_nudge(void)
+{
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    s_nudge_tgt[0] = s_nudge_tgt[1] = 0.0f;
+    s_nudge[0]     = s_nudge[1]     = 0.0f;
+    s_nudge_us     = 0;
+    xSemaphoreGive(s_mutex);
+}
+
+/* Move the offset in use towards the laptop's (or 0 if it went quiet); return it. */
+static void nudge_step(float dt, float *n, float *e)
+{
+    xSemaphoreTake(s_mutex, portMAX_DELAY);
+    float tn = s_nudge_tgt[0], te = s_nudge_tgt[1];
+    if (esp_timer_get_time() - s_nudge_us > NUDGE_STALE_US) { tn = 0.0f; te = 0.0f; }
+    float dn = tn - s_nudge[0], de = te - s_nudge[1];
+    float d  = sqrtf(dn * dn + de * de), lim = NUDGE_RATE_MPS * dt;
+    if (d > lim && d > 0.0f) { dn *= lim / d; de *= lim / d; }
+    s_nudge[0] += dn;
+    s_nudge[1] += de;
+    *n = s_nudge[0];
+    *e = s_nudge[1];
+    xSemaphoreGive(s_mutex);
+}
+
+/* ---------------------------------------------------------------------------
  * Trajectory playback — linear interpolation between samples, with the
  * segment velocity as feedforward so PX4 tracks without lag.
  * --------------------------------------------------------------------------- */
@@ -248,7 +297,9 @@ static void traj_tick(void)
 
     if (k >= (float)last) {
         const traj_pt_t *p = &s_traj[last];
-        mavlink_set_position_ned(s_traj_org[0] + p->x, s_traj_org[1] + p->y,
+        float nn, ne;
+        nudge_step(0.0f, &nn, &ne);                 /* keep the offset in use, no step */
+        mavlink_set_position_ned(s_traj_org[0] + p->x + nn, s_traj_org[1] + p->y + ne,
                                  s_traj_org[2] + p->z, s_traj_yaw);
         xSemaphoreTake(s_mutex, portMAX_DELAY);
         if (s_nav.state == NAV_TRAJ) {
@@ -294,9 +345,12 @@ static void traj_tick(void)
         s_traj_yaw = wrap_pi(s_traj_yaw + s_traj_yaw_rate * dt);
     }
 
+    float nn, ne;                                   /* laptop correction loop offset */
+    nudge_step(dt, &nn, &ne);
+
     mavlink_set_position_velocity_ned(
-        s_traj_org[0] + p0->x + a * (p1->x - p0->x),
-        s_traj_org[1] + p0->y + a * (p1->y - p0->y),
+        s_traj_org[0] + p0->x + a * (p1->x - p0->x) + nn,
+        s_traj_org[1] + p0->y + a * (p1->y - p0->y) + ne,
         s_traj_org[2] + p0->z + a * (p1->z - p0->z),
         (p1->x - p0->x) * hz, (p1->y - p0->y) * hz, (p1->z - p0->z) * hz,
         s_traj_yaw);

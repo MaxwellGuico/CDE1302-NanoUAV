@@ -341,6 +341,25 @@ python3 laptop/send_trajectory.py --takeoff --takeoff-wait 12 --trajectory traje
 See `trajectory/README.md` for the included circle and compact minimum-snap
 ellipse, how to regenerate their CSV files, and the space each path needs.
 
+### Laptop trajectory correction (track loop)
+
+The firmware accepts `CMD_TRAJ_NUDGE` (`0x0B`) on UDP port 5006. Send
+`struct.pack("<BBff", 0x02, 0x0B, north_m, east_m)` to request a horizontal
+offset in NED metres. The reply returns to the sender's IP and port:
+`struct.unpack("<4sffff", reply)` gives `b"ENDG"`, clamped target north/east,
+and currently applied north/east (20 bytes total).
+
+The offset vector is limited to 0.40 m. During trajectory playback it moves
+towards the target at up to 0.15 m/s, or back towards zero after 1.5 s without
+updates. Each accepted `CMD_START` clears it before takeoff; the final trajectory
+hold keeps the last applied offset. PX4 is requested to stream
+`LOCAL_POSITION_NED` at 10 Hz at startup and on periodic stream refreshes.
+
+This is the firmware half of the correction loop. The package's referenced
+`laptop/miniproject/track_loop.py` controller is not included in this repository
+or the firmware ZIP. Existing trajectory scripts do not send corrections;
+without a controller sending nudges, trajectory offsets remain zero.
+
 ## Ground AprilTag mapping and raw CSV recording
 
 `laptop/tag_mapper.py` records original camera JPEGs, MAVLink packets, and
